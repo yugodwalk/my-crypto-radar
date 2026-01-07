@@ -1,0 +1,33 @@
+name: Daily Crypto Scan
+
+on:
+  schedule:
+    # 00:01 UTC 等于 北京时间 08:01 AM
+    - cron: '1 0 * * *'
+  workflow_dispatch: # 允许手动点击运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests pandas pandas_ta
+
+      - name: Run scan script
+        run: python auto_scan.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add last_scan.json
+          git commit -m "Auto Scan Result: $(date)" || exit 0
+          git push
