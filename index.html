@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Power Quant Pro V12.2 - Feature Enhanced</title>
+    <title>Power Quant Pro V12.3 - Streak Enhanced</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -11,9 +11,10 @@
         body { background-color: #f8fafc; font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .mono { font-family: 'JetBrains Mono', monospace; }
         
-        /* 选项卡样式 */
+        /* 选项卡样式 - 统一交互 */
         .tab-btn { flex: 1; padding: 14px; text-align: center; font-weight: 900; font-size: 14px; cursor: pointer; border-radius: 1rem; color: #64748b; transition: all 0.2s; border: 1px solid transparent; }
         .tab-btn:hover { background: #f1f5f9; }
+        /* 激活状态：所有板块统一使用黑色背景+黄色文字 */
         .tab-btn.active { background: #1e293b; color: #fde047; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #1e293b; }
 
         /* 控制栏通用样式 */
@@ -41,6 +42,10 @@
         .high-pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; background: #f1f5f9; color: #64748b; }
         .high-pill.strong { background: #dbeafe; color: #2563eb; }
 
+        /* 上榜天数胶囊 (新增) */
+        .streak-pill { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 900; background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; display: inline-flex; items-align: center; gap: 4px; }
+        .streak-pill i { font-size: 9px; margin-top: 1px; }
+
         /* 破高雷达颜色 */
         .br-yellow { background: #fef08a; color: #854d0e; } 
         .br-blue { background: #bfdbfe; color: #1e40af; } 
@@ -63,10 +68,11 @@
     <div id="app" class="max-w-[2200px] mx-auto">
         
         <!-- 顶部导航 -->
+        <!-- ID 已修改为 tabTrend, tabHeatmap, tabBreakout 以匹配 switchTab 逻辑，确保样式统一 -->
         <div class="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 mb-6 gap-2 max-w-2xl">
             <div onclick="switchTab('trend')" id="tabTrend" class="tab-btn active"><i class="fas fa-layer-group mr-2"></i>趋势发现看板</div>
-            <div onclick="switchTab('heatmap')" id="tabHeat" class="tab-btn"><i class="fas fa-fire mr-2"></i>涨跌热力榜</div>
-            <div onclick="switchTab('breakout')" id="tabBreak" class="tab-btn"><i class="fas fa-crosshairs mr-2"></i>破高雷达</div>
+            <div onclick="switchTab('heatmap')" id="tabHeatmap" class="tab-btn"><i class="fas fa-fire mr-2"></i>涨跌热力榜</div>
+            <div onclick="switchTab('breakout')" id="tabBreakout" class="tab-btn"><i class="fas fa-crosshairs mr-2"></i>破高雷达</div>
         </div>
         
         <!-- 全局状态提示 -->
@@ -79,7 +85,6 @@
         <div id="viewTrend" class="tab-content">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <div class="segmented-control shadow-sm">
-                    <!-- 成交额默认改为 10M -->
                     <div class="segment"><span class="segment-label">成交额门槛(M)</span><input type="number" id="tr_vol" class="segment-input" value="10" onchange="TrendModule.saveConfig()"></div>
                     <div class="segment"><span class="segment-label">符合根数门槛</span><input type="number" id="tr_bars" class="segment-input" value="10" onchange="TrendModule.saveConfig()"></div>
                     <div class="segment">
@@ -89,7 +94,6 @@
                 </div>
                 <div class="segmented-control shadow-sm border-blue-50">
                     <div class="segment !flex-row !gap-3 !px-4">
-                        <!-- 保持原布局：上涨/下跌按钮 -->
                         <div id="tr_btnLong" onclick="TrendModule.setDirection('long')" class="flex-1 py-3 text-center font-black rounded-xl cursor-pointer bg-slate-100 text-slate-400 text-xs transition-all">上涨趋势</div>
                         <div id="tr_btnShort" onclick="TrendModule.setDirection('short')" class="flex-1 py-3 text-center font-black rounded-xl cursor-pointer bg-slate-100 text-slate-400 text-xs transition-all">下跌趋势</div>
                     </div>
@@ -147,7 +151,6 @@
                         <div class="h-6 w-px bg-slate-200 mx-2"></div>
                         <div class="flex items-center gap-2">
                             <span class="text-[9px] text-slate-400 uppercase">阈值(M)</span>
-                            <!-- 默认 5M -->
                             <input type="number" id="ht_vol" class="mini-input w-14" value="5">
                         </div>
                     </div>
@@ -168,7 +171,8 @@
                 <div id="ht_progCont" class="hidden h-1 bg-slate-100 w-full"><div id="ht_bar" class="h-full bg-indigo-500 transition-all w-0"></div></div>
                 <div class="overflow-x-auto flex-1 bg-white">
                     <table class="w-full text-center">
-                        <thead><tr class="bg-slate-50 text-[10px] text-slate-400 font-black uppercase tracking-widest"><th class="py-5 pl-8 text-left">资产名称</th><th>24H涨跌</th><th>24H成交额</th><th>主买占比</th><th>乖离率</th><th>量比</th><th>RSI</th><th class="pr-8 text-right">破高天数</th></tr></thead>
+                        <!-- 表头已修改：破高天数 -> 趋势强度，并新增 上榜天数 -->
+                        <thead><tr class="bg-slate-50 text-[10px] text-slate-400 font-black uppercase tracking-widest"><th class="py-5 pl-8 text-left">资产名称</th><th>24H涨跌</th><th>24H成交额</th><th>主买占比</th><th>乖离率</th><th>量比</th><th>RSI</th><th>趋势强度</th><th class="pr-8 text-right">上榜天数</th></tr></thead>
                         <tbody id="ht_table" class="divide-y divide-slate-50 font-bold text-sm text-slate-700"></tbody>
                     </table>
                 </div>
@@ -178,7 +182,6 @@
         <!-- MODULE 3: 破高雷达 -->
         <div id="viewBreakout" class="tab-content hidden">
             <div class="flex flex-col md:flex-row gap-4 mb-6">
-                <!-- 优化背景框在窄屏下的包裹 -->
                 <div class="bg-white rounded-2xl p-4 flex flex-wrap gap-4 md:gap-8 items-center shadow-sm border border-slate-200 px-6 md:px-8">
                     <div class="flex items-center gap-2">
                         <span class="text-xs font-black text-slate-400 uppercase tracking-widest"><i class="fas fa-clock mr-2"></i>探测周期</span>
@@ -193,7 +196,6 @@
                     
                     <div class="flex items-center gap-2">
                         <span class="text-[10px] font-black text-slate-400 uppercase">门槛(M)</span>
-                        <!-- 默认 5M -->
                         <input type="number" id="br_vol" class="mini-input w-16 !text-sm" value="5">
                     </div>
                 </div>
@@ -287,7 +289,6 @@
                 ].sort((a,b)=>a-b);
                 localStorage.setItem('cfg_trend_v12_2', JSON.stringify(this.config));
             },
-            // 点击按钮改为过滤逻辑，再次点击恢复显示全部
             setDirection: function(d) { 
                 if (this.config.displayDir === d) {
                     this.config.displayDir = null; 
@@ -333,7 +334,6 @@
                             const T = k.map(x=>parseFloat(x[10]));
                             const curC = C[C.length-1];
 
-                            // 检查上涨还是下跌
                             let detectedDir = null;
                             const checkTrend = (isL) => {
                                 let ok = true;
@@ -413,7 +413,6 @@
                 const tb = document.getElementById('tr_table');
                 let data = this.results;
                 
-                // 根据当前按钮状态过滤显示
                 if(this.config.displayDir) {
                     data = data.filter(x => x.dir === this.config.displayDir);
                 }
@@ -549,12 +548,40 @@
                 cont.innerHTML = html;
             },
             switchDate: function(d) { this.viewDate = d; this.renderDates(); this.render(); },
+            
+            // 新增：计算上榜天数
+            calcStreak: function(symbol, dir, dateStr) {
+                let count = 1;
+                let curr = new Date(dateStr);
+                // 向上回溯最多30天
+                for(let i=0; i<30; i++) {
+                    // 安全的日期回退
+                    curr.setUTCDate(curr.getUTCDate() - 1);
+                    let d = curr.toISOString().split('T')[0];
+                    
+                    if(!this.dataStore[d]) break; // 当天无数据，断开
+                    
+                    let list = dir === 'gain' ? this.dataStore[d].gain : this.dataStore[d].lose;
+                    if(!list) break;
+                    
+                    if(list.find(x => x.s === symbol)) {
+                        count++;
+                    } else {
+                        break; // 不在榜单，断开
+                    }
+                }
+                return count;
+            },
+
             render: function() {
                 const tb = document.getElementById('ht_table');
                 const dayData = this.dataStore[this.viewDate];
-                if(!dayData) { tb.innerHTML = `<tr><td colspan="8" class="py-24 text-center text-slate-300 font-black uppercase text-xs">暂无数据</td></tr>`; return; }
+                if(!dayData) { tb.innerHTML = `<tr><td colspan="9" class="py-24 text-center text-slate-300 font-black uppercase text-xs">暂无数据</td></tr>`; return; }
                 const list = this.config.dir === 'gain' ? dayData.gain : dayData.lose;
-                tb.innerHTML = list.map((d, i) => `
+                
+                tb.innerHTML = list.map((d, i) => {
+                    const streak = this.calcStreak(d.s, this.config.dir, this.viewDate);
+                    return `
                     <tr class="hover:bg-slate-50 transition-all">
                         <td class="py-4 pl-8 text-left">
                             <div class="flex flex-col gap-1.5">
@@ -571,9 +598,12 @@
                         <td class="font-black ${parseFloat(d.bias)>0?'text-emerald-500':'text-rose-500'} text-xs">${parseFloat(d.bias)>0?'+':''}${d.bias}%</td>
                         <td><span class="data-tag tag-rvol">${d.rvol}x</span></td>
                         <td class="text-xs font-bold ${d.rsi>70?'text-rose-500':d.rsi<30?'text-blue-500':'text-slate-400'}">${d.rsi}</td>
-                        <td class="pr-8 text-right font-black text-blue-600 text-xs">${d.hiD} 天</td>
+                        <td class="font-black text-blue-600 text-xs">${d.hiD} 天</td>
+                        <td class="pr-8 text-right">
+                             ${streak > 1 ? `<span class="streak-pill"><i class="fas fa-fire"></i> ${streak} Days</span>` : `<span class="text-[10px] font-bold text-slate-300">New</span>`}
+                        </td>
                     </tr>
-                `).join('');
+                `}).join('');
             }
         };
 
@@ -632,7 +662,10 @@
         function switchTab(t) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            // 显示对应内容
             document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('hidden');
+            // 激活对应按钮 (ID规则: tab + CapitalizedName)
+            // 例如: trend -> tabTrend, heatmap -> tabHeatmap
             document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('active');
         }
 
